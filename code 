@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalMap Connect - Enterprise Urban Infrastructure & Spatial Tracking Platform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+        #map { z-index: 1; }
+        .leaflet-popup-content-wrapper {
+            padding: 0;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+        }
+        .leaflet-popup-content {
+            margin: 0;
+            width: 280px !important;
+        }
+        .leaflet-container {
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+
+    <!-- Executive Header -->
+    <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 md:px-6 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-sky-500/20">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base md:text-lg leading-tight tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                        LocalMap Connect
+                        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 tracking-wider uppercase">Enterprise v2.5</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Urban Infrastructure & Spatial Intelligence Engine</p>
+                </div>
+            </div>
+
+            <!-- Health Status Badge -->
+            <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>System Operational: 99.98% SLA</span>
+            </div>
+        </div>
+
+        <!-- Global Navigation & Search -->
+        <div class="flex items-center gap-3">
+            <!-- View Selector Tabs -->
+            <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                <button onclick="switchMainView('dashboard')" id="navBtn-dashboard" class="px-3.5 py-1.5 rounded-lg bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-layer-group"></i> <span class="hidden sm:inline">Spatial Map</span>
+                </button>
+                <button onclick="switchMainView('table')" id="navBtn-table" class="px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-table-list"></i> <span class="hidden sm:inline">Data Registry</span>
+                </button>
+                <button onclick="switchMainView('analytics')" id="navBtn-analytics" class="px-3.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-2 transition-all">
+                    <i class="fa-solid fa-chart-pie"></i> <span class="hidden sm:inline">Analytics</span>
+                </button>
+            </div>
+
+            <!-- Global Action CTA -->
+            <button onclick="openReportModal()" class="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-md shadow-sky-500/20 transition-all transform active:scale-95">
+                <i class="fa-solid fa-circle-plus"></i>
+                <span class="hidden md:inline">Log Issue</span>
+            </button>
+
+            <!-- Theme Switcher -->
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2.5 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Toggle Theme">
+                <i class="fa-solid fa-sun hidden" id="sunIcon"></i>
+                <i class="fa-solid fa-moon" id="moonIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Key Metrics Stats Banner -->
+    <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/70 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Total Reports</div>
+                <div id="statTotal" class="text-sm font-extrabold text-slate-800 dark:text-slate-100">0</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Active Pending</div>
+                <div id="statActive" class="text-sm font-extrabold text-amber-600 dark:text-amber-400">0</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Resolved Rate</div>
+                <div id="statResolvedRate" class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">0%</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+                <div class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Avg Dispatch Time</div>
+                <div id="statAvgTime" class="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">3.2 Hours</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- VIEW 1: DUAL-PANEL SPATIAL DASHBOARD -->
+        <div id="view-dashboard" class="flex-1 flex flex-col lg:flex-row w-full overflow-hidden">
+            <!-- Sidebar Feed & Quick Controls -->
+            <aside class="w-full lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 max-h-[45vh] lg:max-h-none overflow-hidden z-10">
+                
+                <!-- Filter & Search Panel Header -->
+                <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5 bg-slate-50/70 dark:bg-slate-900/70">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchInput" placeholder="Search by title, location, or keyword..." onkeyup="filterReports()" class="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none text-slate-700 dark:text-slate-200 shadow-sm">
+                    </div>
+                    
+                    <!-- Category & Status Filters -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="statusFilter" onchange="filterReports()" class="py-1.5 px-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="ALL">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                        <select id="categoryFilter" onchange="filterReports()" class="py-1.5 px-2.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="ALL">All Categories</option>
+                            <option value="Roads & Transportation">Roads & Transport</option>
+                            <option value="Water & Utilities">Water & Utilities</option>
+                            <option value="Grid & Electrical">Grid & Electrical</option>
+                            <option value="Public Sanitation">Public Sanitation</option>
+                        </select>
+                    </div>
+
+                    <!-- Severity Filter Tabs -->
+                    <div class="flex gap-1 pt-1 overflow-x-auto text-[11px] font-semibold">
+                        <button onclick="setSeverityFilter('ALL')" id="sevTab-ALL" class="px-2.5 py-1 rounded-lg bg-sky-600 text-white shadow-sm shrink-0">All</button>
+                        <button onclick="setSeverityFilter('Critical')" id="sevTab-Critical" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-red-500 shrink-0">Critical</button>
+                        <button onclick="setSeverityFilter('High')" id="sevTab-High" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-orange-500 shrink-0">High</button>
+                        <button onclick="setSeverityFilter('Medium')" id="sevTab-Medium" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-amber-500 shrink-0">Medium</button>
+                        <button onclick="setSeverityFilter('Low')" id="sevTab-Low" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-500 shrink-0">Low</button>
+                    </div>
+                </div>
+
+                <!-- Feed Scroll Container -->
+                <div id="reportsList" class="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar">
+                    <!-- Dynamic Feed Cards Inserted via JS -->
+                </div>
+            </aside>
+
+            <!-- Leaflet Interactive Map View -->
+            <main class="flex-1 relative flex flex-col h-full">
+                <div id="map" class="w-full h-full flex-1"></div>
+
+                <!-- Tile Map Style Toggle floating control -->
+                <div class="absolute top-4 right-4 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-200 dark:border-slate-800 p-1.5 rounded-xl shadow-lg flex gap-1 text-xs font-semibold">
+                    <button onclick="setTileLayer('street')" id="tileBtn-street" class="px-3 py-1.5 rounded-lg bg-sky-600 text-white shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-map"></i> Standard
+                    </button>
+                    <button onclick="setTileLayer('dark')" id="tileBtn-dark" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-moon"></i> Dark Base
+                    </button>
+                </div>
+
+                <!-- Map Helper Info Badge -->
+                <div class="absolute bottom-4 left-4 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-800 p-3 rounded-xl shadow-lg text-xs max-w-xs hidden sm:block">
+                    <div class="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-1">
+                        <i class="fa-solid fa-location-crosshairs text-sky-600"></i> Interactive Spatial Pinning
+                    </div>
+                    <p class="text-slate-500 dark:text-slate-400">Click anywhere on the map grid to set GPS coordinates and trigger the report generator modal.</p>
+                </div>
+            </main>
+        </div>
+
+        <!-- VIEW 2: DATA REGISTRY TABLE -->
+        <div id="view-table" class="hidden flex-1 p-4 md:p-6 overflow-y-auto w-full custom-scrollbar bg-slate-50 dark:bg-slate-950">
+            <div class="max-w-7xl mx-auto space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Municipal Infrastructure Master Registry</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Perform bulk status edits, review raw telemetry data, and export datasets</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="bulkDeleteSelected()" class="px-3 py-1.5 bg-red-50 dark:bg-red-950/60 hover:bg-red-100 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i> Bulk Delete
+                        </button>
+                        <button onclick="exportToCSV()" class="px-3 py-1.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-csv"></i> Export CSV
+                        </button>
+                        <button onclick="exportToJSON()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-code"></i> Export JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Component Container -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">
+                                    <th class="p-3.5 w-10 text-center">
+                                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAllRows(this)" class="rounded border-slate-300 dark:border-slate-700">
+                                    </th>
+                                    <th class="p-3.5">Issue Title & ID</th>
+                                    <th class="p-3.5">Category</th>
+                                    <th class="p-3.5">Severity</th>
+                                    <th class="p-3.5">Coordinates (Lat, Lng)</th>
+                                    <th class="p-3.5">Logged Date</th>
+                                    <th class="p-3.5">Workflow Status</th>
+                                    <th class="p-3.5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-200 dark:divide-slate-800">
+                                <!-- Dynamic Table Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: SPATIAL ANALYTICS DASHBOARD -->
+        <div id="view-analytics" class="hidden flex-1 p-4 md:p-6 overflow-y-auto w-full custom-scrollbar bg-slate-50 dark:bg-slate-950">
+            <div class="max-w-7xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">Spatial Infrastructure Analytics Engine</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Autonomous evaluation of issue categories, resolution SLAs, and monthly breakdown</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Category Doughnut Chart -->
+                    <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-sky-500"></i> Category Breakdown
+                        </h3>
+                        <div class="h-60 relative flex items-center justify-center">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Status Distribution Bar Chart -->
+                    <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                        <h3 class="text-xs fo
